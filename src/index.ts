@@ -3,15 +3,41 @@ import { createTables } from "./db";
 import express from "express";
 import cors from "cors";
 
-import helloRoutes from "./routes/helloRoutes"
+import loginRoutes from "./routes/loginRoutes";
+import registerRoutes from "./routes/registerRoutes";
+import userRoutes from "./routes/userRoutes";
+import gymRoutes from "./routes/gymRoutes";
+import groupRoutes from "./routes/groupRoutes";
+import classRoutes from "./routes/classRoutes";
+import studentRoutes from "./routes/studentRoutes";
+import populateDatabase from "./population-scripts";
+import { populate } from "dotenv";
+
+
+
 
 const app = express();
-app.use(cors());
+
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+
+
 app.use(express.json());
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 4000;
 
-app.use("/api", helloRoutes);
-
+app.use("/api", loginRoutes);
+app.use("/api", registerRoutes);
+app.use("/api", userRoutes);
+app.use("/api", gymRoutes);
+app.use("/api", groupRoutes);
+app.use("/api", classRoutes);
+app.use("/api", studentRoutes)
 createTables()
   .then(() => {
     app.listen(PORT, () => {
@@ -22,5 +48,6 @@ createTables()
     console.error("❌ Failed to initialize database tables:", err);
     process.exit(1);
   });
+
 
 export default app;

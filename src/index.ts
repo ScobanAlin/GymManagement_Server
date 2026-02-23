@@ -10,6 +10,10 @@ import gymRoutes from "./routes/gymRoutes";
 import groupRoutes from "./routes/groupRoutes";
 import classRoutes from "./routes/classRoutes";
 import studentRoutes from "./routes/studentRoutes";
+import paymentRoutes from "./routes/paymentRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
+import reportRoutes from "./routes/reportRoutes";
+import attendanceRoutes from "./routes/attendanceRoutes";
 import populateDatabase from "./population-scripts";
 import { populate } from "dotenv";
 
@@ -37,7 +41,11 @@ app.use("/api", userRoutes);
 app.use("/api", gymRoutes);
 app.use("/api", groupRoutes);
 app.use("/api", classRoutes);
-app.use("/api", studentRoutes)
+app.use("/api", studentRoutes);
+app.use("/api", paymentRoutes);
+app.use("/api", notificationRoutes);
+app.use("/api", reportRoutes);
+app.use("/api", attendanceRoutes);
 createTables()
   .then(() => {
     app.listen(PORT, () => {

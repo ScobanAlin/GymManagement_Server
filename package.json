@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc && cp -r src/views dist/",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "populate": "ts-node src/population-scripts.ts",
+    "populate:attendance": "ts-node src/attendance-population.ts",
+    "populate:notifications": "ts-node src/notification-population.ts"
   },
   "dependencies": {
     "@types/express": "^5.0.3",

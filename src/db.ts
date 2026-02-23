@@ -98,9 +98,61 @@ CREATE TABLE IF NOT EXISTS payments (
   id SERIAL PRIMARY KEY,
   amount DECIMAL(10,2) NOT NULL CHECK (amount >= 0),
   student_id INT REFERENCES students(id) ON DELETE CASCADE,
-  month TEXT NOT NULL,
-  payment_date DATE DEFAULT CURRENT_DATE
+  year INT NOT NULL DEFAULT EXTRACT(YEAR FROM CURRENT_DATE),
+  month INT NOT NULL DEFAULT EXTRACT(MONTH FROM CURRENT_DATE),
+  payment_date DATE DEFAULT CURRENT_DATE,
+  UNIQUE (student_id, year, month)
 );
+
+-- Migration: Add year column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'year') THEN
+    ALTER TABLE payments ADD COLUMN year INT;
+    UPDATE payments SET year = EXTRACT(YEAR FROM payment_date)::INT WHERE year IS NULL;
+    ALTER TABLE payments ALTER COLUMN year SET NOT NULL;
+  END IF;
+END $$;
+
+-- Migration: Convert month to INT if it's still TEXT
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'month' AND data_type = 'character varying') THEN
+    ALTER TABLE payments ALTER COLUMN month TYPE INT USING CASE 
+      WHEN month::text ~ '^[0-9]+$' THEN month::INT
+      ELSE EXTRACT(MONTH FROM payment_date)::INT
+    END;
+  END IF;
+END $$;
+
+-- ==============================
+-- ATTENDANCE TABLE
+-- ==============================
+CREATE TABLE IF NOT EXISTS attendance (
+  id SERIAL PRIMARY KEY,
+  class_id INT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  student_id INT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  coach_id INT REFERENCES users(id) ON DELETE SET NULL,
+  attended BOOLEAN NOT NULL DEFAULT false,
+  recorded_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (class_id, student_id)
+);
+
+-- Migration: Add coach_id column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'attendance' AND column_name = 'coach_id') THEN
+    ALTER TABLE attendance ADD COLUMN coach_id INT REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Migration: Remove notes column if it exists
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'attendance' AND column_name = 'notes') THEN
+    ALTER TABLE attendance DROP COLUMN notes;
+  END IF;
+END $$;
 
 -- ==============================
 -- NOTIFICATIONS TABLE
@@ -110,8 +162,31 @@ CREATE TABLE IF NOT EXISTS notifications (
   coach_id INT REFERENCES users(id) ON DELETE SET NULL,
   student_id INT REFERENCES students(id) ON DELETE CASCADE,
   group_id INT REFERENCES groups(id) ON DELETE SET NULL,
-  description TEXT NOT NULL
+  description TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  is_read BOOLEAN NOT NULL DEFAULT false
 );
+
+-- Migration: Add created_at column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'notifications' AND column_name = 'created_at') THEN
+    ALTER TABLE notifications ADD COLUMN created_at TIMESTAMP;
+    UPDATE notifications SET created_at = NOW() WHERE created_at IS NULL;
+    ALTER TABLE notifications ALTER COLUMN created_at SET DEFAULT NOW();
+  END IF;
+END $$;
+
+-- Migration: Add is_read column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'notifications' AND column_name = 'is_read') THEN
+    ALTER TABLE notifications ADD COLUMN is_read BOOLEAN;
+    UPDATE notifications SET is_read = false WHERE is_read IS NULL;
+    ALTER TABLE notifications ALTER COLUMN is_read SET NOT NULL;
+    ALTER TABLE notifications ALTER COLUMN is_read SET DEFAULT false;
+  END IF;
+END $$;
 
 -- ==============================
 -- TRIGGER: update updated_at

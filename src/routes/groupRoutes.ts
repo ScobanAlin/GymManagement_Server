@@ -7,6 +7,7 @@ import {
     getGroupClassesController,
     getGroupStudentsController
 } from "../controllers/groupController";
+import { createClassController } from "../controllers/classController";
 
 const router = express.Router();
 
@@ -22,5 +23,6 @@ router.delete("/groups/:id", authMiddleware, requireRole("coach"), deleteGroupCo
 
 router.get("/groups/:id/students", authMiddleware, requireRole("coach"), getGroupStudentsController);
 router.get("/groups/:id/classes", authMiddleware, requireRole("coach"), getGroupClassesController);
+router.post("/groups/:groupId/classes", authMiddleware, requireRole("coach"), createClassController);
 
 export default router;

@@ -57,7 +57,7 @@ export const getAttendanceReport = async (filters?: {
     SELECT 
       a.id,
       a.attended,
-      a.notes,
+            NULL::text AS notes,
       a.recorded_at AS "recordedAt",
       c.id AS "classId",
       c.class_date AS "classDate",

@@ -131,6 +131,7 @@ export const getAllStudentsWithPaymentStatus = async (year: number, month: numbe
                 WHEN p.id IS NOT NULL THEN true
                 ELSE false
             END AS "hasPaid",
+            p.id AS "paymentId",
             p.amount,
             p.payment_date AS "paymentDate"
         FROM students s

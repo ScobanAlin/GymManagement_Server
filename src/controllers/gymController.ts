@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getGyms, createGym, deleteGym } from "../models/gymModel";
+import { getGyms, createGym, updateGym, deleteGym } from "../models/gymModel";
 
 export const getGymsController = async (req: Request, res: Response) => {
     try {
@@ -22,6 +22,18 @@ export const createGymController = async (req: Request, res: Response) => {
     }
 };
 
+
+export const updateGymController = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { name, location, capacity } = req.body;
+    try {
+        const updated = await updateGym(id, name, location, capacity);
+        res.status(200).json(updated);
+    } catch (error) {
+        console.error("Error updating gym:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
 
 export const deleteGymController = async (req: Request, res: Response) => {
     const { id } = req.params;

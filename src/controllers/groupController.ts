@@ -4,7 +4,10 @@ import {
     createGroup,
     deleteGroup,
     getGroupStudents,
-    getGroupClasses
+    getGroupClasses,
+    getGroupSchedule,
+    deleteFutureClassSlot,
+    getGroupPastClasses,
 } from "../models/groupModel";
 
 export const getGroupsController = async (req: Request, res: Response) => {
@@ -61,6 +64,50 @@ export const getGroupClassesController = async (req: Request, res: Response) => 
         res.status(200).json(classes);
     } catch (error) {
         console.error("Error fetching group classes:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getGroupScheduleController = async (req: Request, res: Response) => {
+    try {
+        const slots = await getGroupSchedule(Number(req.params.id));
+        res.status(200).json(slots);
+    } catch (error) {
+        console.error("Error fetching group schedule:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const deleteGroupScheduleSlotController = async (req: Request, res: Response) => {
+    try {
+        const groupId = Number(req.params.id);
+        const { weekday, beginTime, endTime, gymId } = req.body;
+
+        if (weekday === undefined || !beginTime || !endTime || !gymId) {
+            return res.status(400).json({ message: "weekday, beginTime, endTime, gymId are required" });
+        }
+
+        const deleted = await deleteFutureClassSlot(
+            groupId,
+            Number(weekday),
+            beginTime,
+            endTime,
+            Number(gymId)
+        );
+
+        res.status(200).json({ deleted });
+    } catch (error) {
+        console.error("Error deleting schedule slot:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getGroupPastClassesController = async (req: Request, res: Response) => {
+    try {
+        const classes = await getGroupPastClasses(Number(req.params.id));
+        res.status(200).json(classes);
+    } catch (error) {
+        console.error("Error fetching past classes:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 };

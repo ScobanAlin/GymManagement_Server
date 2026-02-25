@@ -78,3 +78,74 @@ export const getGroupClasses = async (groupId: number) => {
         date: c.date.toISOString().split("T")[0]  // format: YYYY-MM-DD
     }));
 };
+
+/**
+ * Get the distinct recurring schedule for a group derived from future classes.
+ * Returns one row per unique (weekday, beginTime, endTime, gym) combination.
+ */
+export const getGroupSchedule = async (groupId: number) => {
+    const result = await pool.query(
+        `SELECT DISTINCT
+            EXTRACT(DOW FROM c.class_date)::int AS "weekday",
+            c.begin_time AS "beginTime",
+            c.end_time   AS "endTime",
+            c.gym_id     AS "gymId",
+            gy.name      AS "gymName"
+        FROM classes c
+        JOIN gyms gy ON c.gym_id = gy.id
+        WHERE c.group_id = $1
+          AND c.class_date >= CURRENT_DATE
+        ORDER BY "weekday", "beginTime"`,
+        [groupId]
+    );
+    return result.rows;
+};
+
+/**
+ * Delete all future classes for a group that match a specific
+ * (weekday, beginTime, endTime, gymId) slot.
+ */
+export const deleteFutureClassSlot = async (
+    groupId: number,
+    weekday: number,
+    beginTime: string,
+    endTime: string,
+    gymId: number
+) => {
+    const result = await pool.query(
+        `DELETE FROM classes
+         WHERE group_id = $1
+           AND class_date >= CURRENT_DATE
+           AND EXTRACT(DOW FROM class_date)::int = $2
+           AND begin_time = $3
+           AND end_time   = $4
+           AND gym_id     = $5`,
+        [groupId, weekday, beginTime, endTime, gymId]
+    );
+    return result.rowCount;
+};
+
+/**
+ * Get past classes (class_date < today) for a group, newest first.
+ */
+export const getGroupPastClasses = async (groupId: number) => {
+    const result = await pool.query(
+        `SELECT
+            c.id,
+            c.class_date AS "date",
+            c.begin_time AS "begin",
+            c.end_time   AS "end",
+            gy.id        AS "gymId",
+            gy.name      AS "gymName"
+        FROM classes c
+        JOIN gyms gy ON gy.id = c.gym_id
+        WHERE c.group_id = $1
+          AND c.class_date < CURRENT_DATE
+        ORDER BY c.class_date DESC, c.begin_time ASC`,
+        [groupId]
+    );
+    return result.rows.map(c => ({
+        ...c,
+        date: c.date.toISOString().split("T")[0],
+    }));
+};

@@ -11,8 +11,13 @@ export const register = async (req: Request, res: Response) => {
     try {
         const newUser = await createUser({ first_name, last_name, email, password, role });
         return res.status(201).json({ message: "User registered successfully.", user: newUser });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error registering user:", error);
+
+        if (error?.message === "User already exists" || error?.code === "23505") {
+            return res.status(409).json({ message: "An account with this email already exists." });
+        }
+
         return res.status(500).json({ message: "Internal server error." });
     }
 

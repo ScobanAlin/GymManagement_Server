@@ -16,21 +16,36 @@ import reportRoutes from "./routes/reportRoutes";
 import attendanceRoutes from "./routes/attendanceRoutes";
 import subscriptionTypeRoutes from "./routes/subscriptionTypeRoutes";
 import emailRoutes from "./routes/emailRoutes";
-import populateDatabase from "./population-scripts";
-import { populate } from "dotenv";
-
-
-
 
 const app = express();
 
-const allowedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL, "http://localhost:3000"]
-  : ["http://localhost:3000"];
+const normalizeOrigin = (origin: string) => origin.replace(/\/+$/, "");
+
+const envOrigins = [process.env.FRONTEND_URL, process.env.FRONTEND_URLS]
+  .filter(Boolean)
+  .flatMap((value) => (value as string).split(","))
+  .map((value) => value.trim())
+  .filter(Boolean)
+  .map(normalizeOrigin);
+
+const allowedOrigins = new Set(["http://localhost:3000", ...envOrigins]);
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const normalizedOrigin = normalizeOrigin(origin);
+      if (allowedOrigins.has(normalizedOrigin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })

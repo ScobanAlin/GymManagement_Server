@@ -41,6 +41,10 @@ app.use(
 app.use(express.json());
 const PORT = Number(process.env.PORT) || 4000;
 
+app.get("/healthz", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 app.use("/api", loginRoutes);
 app.use("/api", registerRoutes);
 app.use("/api", userRoutes);

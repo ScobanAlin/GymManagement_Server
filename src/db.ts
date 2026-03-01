@@ -2,6 +2,17 @@ import "dotenv/config";
 import { Pool } from "pg";
 
 const connectionString = process.env.DATABASE_URL;
+const resolvedHost = process.env.PGHOST || "localhost";
+const resolvedPort = Number(process.env.PGPORT) || 5432;
+const resolvedDatabase = process.env.PGDATABASE || "postgres";
+const resolvedUser = process.env.PGUSER || process.env.USER;
+const resolvedPassword = process.env.PGPASSWORD;
+
+if (!connectionString && !process.env.PGDATABASE) {
+  console.warn(
+    "⚠️ PGDATABASE is not set. Falling back to database 'postgres'. Set PGDATABASE in your .env for a dedicated app database."
+  );
+}
 
 const pool = connectionString
   ? new Pool({
@@ -11,11 +22,11 @@ const pool = connectionString
       : false,
   })
   : new Pool({
-    host: process.env.PGHOST,
-    port: Number(process.env.PGPORT) || 5432,
-    database: process.env.PGDATABASE,
-    user: process.env.PGUSER,
-    password: process.env.PGPASSWORD,
+    host: resolvedHost,
+    port: resolvedPort,
+    database: resolvedDatabase,
+    user: resolvedUser,
+    password: resolvedPassword,
     ssl: false,
   });
 

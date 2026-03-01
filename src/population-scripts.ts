@@ -73,16 +73,16 @@ const populateDatabase = async () => {
 
     // === 1. Insert Gyms ===
     const gyms = [
-      { name: "Downtown Fitness Center", location: "Iași", capacity: 120 },
-      { name: "Peak Performance Gym", location: "Cluj-Napoca", capacity: 100 },
+      { name: "Downtown Fitness Center", location: "Iași" },
+      { name: "Peak Performance Gym", location: "Cluj-Napoca" },
     ];
 
     for (const gym of gyms) {
       await pool.query(
-        `INSERT INTO gyms (name, location, capacity)
-         VALUES ($1, $2, $3)
+        `INSERT INTO gyms (name, location)
+         VALUES ($1, $2)
          ON CONFLICT DO NOTHING;`,
-        [gym.name, gym.location, gym.capacity]
+        [gym.name, gym.location]
       );
     }
 

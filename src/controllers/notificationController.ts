@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
-import { deleteNotification, getAllNotifications, updateNotificationRead, createNotification } from "../models/notificationModel";
+import { deleteNotification, getAllNotifications, updateNotificationRead, createNotification, getUnreadNotificationCount } from "../models/notificationModel";
 import { AuthRequest } from "../middlewares/authMiddleware";
+import { sendNotificationEmail } from "../utils/emailService";
 
 export const getAllNotificationsController = async (req: Request, res: Response) => {
     try {
@@ -72,6 +73,29 @@ export const createNotificationController = async (req: AuthRequest, res: Respon
             groupId: groupId ? Number(groupId) : null,
             coachId
         });
+
+        // Send email notification
+        const notificationEmail = process.env.NOTIFICATION_EMAIL;
+        if (notificationEmail) {
+            try {
+                // Get coach name
+                const coachName = req.user
+                    ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'A coach'
+                    : 'A coach';
+
+                const unreadCount = await getUnreadNotificationCount();
+
+                await sendNotificationEmail(
+                    notificationEmail,
+                    coachName,
+                    description.trim(),
+                    unreadCount
+                );
+            } catch (emailErr) {
+                console.error("Failed to send notification email:", emailErr);
+                // Don't fail the request if email fails
+            }
+        }
 
         res.status(201).json(created);
     } catch (err) {

@@ -41,38 +41,26 @@ export const getUpcomingClasses = async (filters?: { startDate?: string; endDate
 };
 
 /**
- * Get attendance records for a specific class
+ * Get attendance records for a specific class.
+ * Returns all active group students with their attendance status.
+ * Students without an attendance record have attended = null (unmarked).
  */
 export const getClassAttendance = async (classId: number) => {
-    await pool.query(`
-        INSERT INTO attendance (class_id, student_id, attended, recorded_at)
-        SELECT
-            c.id,
-            s.id,
-            false,
-            NOW()
-        FROM classes c
-        JOIN student_group sg ON sg.group_id = c.group_id
-        JOIN students s ON s.id = sg.student_id
-        WHERE c.id = $1
-          AND s.status = 'active'
-        ON CONFLICT (class_id, student_id) DO NOTHING
-    `, [classId]);
-
     const result = await pool.query(`
         SELECT 
             a.id,
-            a.class_id AS "classId",
-            a.student_id AS "studentId",
+            $1::int AS "classId",
+            s.id AS "studentId",
             a.attended,
             a.recorded_at AS "recordedAt",
             s.first_name AS "studentFirstName",
             s.last_name AS "studentLastName",
             s.cnp
-        FROM attendance a
-        JOIN students s ON a.student_id = s.id
-        WHERE a.class_id = $1
-          AND s.status = 'active'
+        FROM classes c
+        JOIN student_group sg ON sg.group_id = c.group_id
+        JOIN students s ON s.id = sg.student_id AND s.status = 'active'
+        LEFT JOIN attendance a ON a.class_id = c.id AND a.student_id = s.id
+        WHERE c.id = $1
         ORDER BY s.last_name, s.first_name
     `, [classId]);
 
@@ -99,55 +87,49 @@ export const getGroupStudentsForAttendance = async (groupId: number) => {
 };
 
 /**
- * Update attendance record (mark attended and/or add notes)
+ * Mark a student as present for a class (INSERT attendance record).
+ * Uses ON CONFLICT to handle race conditions.
  */
-export const updateAttendance = async (
-    attendanceId: number,
-    attended: boolean,
+export const markPresent = async (
+    classId: number,
+    studentId: number,
     coachId?: number
 ) => {
     const result = await pool.query(`
-        UPDATE attendance 
-        SET attended = $1, recorded_at = NOW(), coach_id = COALESCE($3, coach_id)
-        WHERE id = $2
-        RETURNING *
-    `, [attended, attendanceId, coachId || null]);
+        INSERT INTO attendance (class_id, student_id, coach_id, attended, recorded_at)
+        VALUES ($1, $2, $3, true, NOW())
+        ON CONFLICT (class_id, student_id) DO UPDATE SET attended = true, coach_id = COALESCE($3, attendance.coach_id), recorded_at = NOW()
+        RETURNING id, class_id AS "classId", student_id AS "studentId", attended, recorded_at AS "recordedAt"
+    `, [classId, studentId, coachId || null]);
 
     return result.rows[0];
 };
 
 /**
- * Get or create attendance record for a student in a class
+ * Mark a student as absent for a class (INSERT/UPDATE attendance record with attended = false).
  */
-export const getOrCreateAttendance = async (classId: number, studentId: number, coachId?: number) => {
-    // First try to get existing
-    const existing = await pool.query(`
-        SELECT * FROM attendance 
-        WHERE class_id = $1 AND student_id = $2
-    `, [classId, studentId]);
-
-    if (existing.rows.length > 0) {
-        return existing.rows[0];
-    }
-
-    // Create new
-    const created = await pool.query(`
+export const markAbsent = async (
+    classId: number,
+    studentId: number,
+    coachId?: number
+) => {
+    const result = await pool.query(`
         INSERT INTO attendance (class_id, student_id, coach_id, attended, recorded_at)
         VALUES ($1, $2, $3, false, NOW())
-        RETURNING id, class_id AS "classId", student_id AS "studentId", coach_id AS "coachId", attended, recorded_at AS "recordedAt"
+        ON CONFLICT (class_id, student_id) DO UPDATE SET attended = false, coach_id = COALESCE($3, attendance.coach_id), recorded_at = NOW()
+        RETURNING id, class_id AS "classId", student_id AS "studentId", attended, recorded_at AS "recordedAt"
     `, [classId, studentId, coachId || null]);
 
-    return created.rows[0];
+    return result.rows[0];
 };
 
 /**
- * Get all observations (attendance records with notes) for a student
+ * Get all observations (attendance records) for a student
  */
 export const getStudentObservations = async (studentId: number) => {
     const result = await pool.query(`
         SELECT 
             a.id,
-            a.notes,
             a.attended,
             a.recorded_at AS "recordedAt",
             c.class_date AS "classDate",
@@ -159,7 +141,7 @@ export const getStudentObservations = async (studentId: number) => {
         JOIN classes c ON a.class_id = c.id
         JOIN groups g ON c.group_id = g.id
         JOIN gyms gy ON c.gym_id = gy.id
-        WHERE a.student_id = $1 AND a.notes IS NOT NULL
+        WHERE a.student_id = $1
         ORDER BY c.class_date DESC, c.begin_time DESC
     `, [studentId]);
 
@@ -173,7 +155,6 @@ export const getRecentObservations = async (coachId: number, limit = 50, filters
     let query = `
         SELECT 
             a.id,
-            a.notes,
             a.attended,
             a.recorded_at AS "recordedAt",
             c.class_date AS "classDate",
@@ -190,7 +171,7 @@ export const getRecentObservations = async (coachId: number, limit = 50, filters
         JOIN classes c ON a.class_id = c.id
         JOIN groups g ON c.group_id = g.id
         JOIN gyms gy ON c.gym_id = gy.id
-        WHERE a.notes IS NOT NULL AND a.coach_id = $1
+        WHERE a.coach_id = $1
     `;
 
     const params: any[] = [coachId];
@@ -209,7 +190,8 @@ export const getRecentObservations = async (coachId: number, limit = 50, filters
 };
 
 /**
- * Create a new observation for a student in a class
+ * Create a new observation for a student in a class.
+ * Also marks the student as present (creates attendance record if needed).
  */
 export const createObservation = async (
     classId: number,
@@ -218,37 +200,17 @@ export const createObservation = async (
     notes: string,
     attended: boolean = true
 ) => {
-    // First check if attendance record exists
-    const existing = await pool.query(`
-        SELECT id FROM attendance 
-        WHERE class_id = $1 AND student_id = $2
-    `, [classId, studentId]);
+    // Create/update attendance record with the given status
+    await pool.query(`
+        INSERT INTO attendance (class_id, student_id, coach_id, attended, recorded_at)
+        VALUES ($1, $2, $3, $4, NOW())
+        ON CONFLICT (class_id, student_id) DO UPDATE SET attended = $4, coach_id = $3, recorded_at = NOW()
+    `, [classId, studentId, coachId, attended]);
 
-    let attendanceId: number;
-
-    if (existing.rows.length > 0) {
-        // Update existing
-        attendanceId = existing.rows[0].id;
-        await pool.query(`
-            UPDATE attendance 
-            SET attended = $1, notes = $2, coach_id = $3, recorded_at = NOW()
-            WHERE id = $4
-        `, [attended, notes, coachId, attendanceId]);
-    } else {
-        // Create new
-        const created = await pool.query(`
-            INSERT INTO attendance (class_id, student_id, coach_id, attended, notes, recorded_at)
-            VALUES ($1, $2, $3, $4, $5, NOW())
-            RETURNING id
-        `, [classId, studentId, coachId, attended, notes]);
-        attendanceId = created.rows[0].id;
-    }
-
-    // Fetch and return the complete record
+    // Fetch and return the observation data
     const result = await pool.query(`
         SELECT 
             a.id,
-            a.notes,
             a.attended,
             a.recorded_at AS "recordedAt",
             c.class_date AS "classDate",
@@ -260,13 +222,13 @@ export const createObservation = async (
             s.id AS "studentId",
             s.first_name AS "studentFirstName",
             s.last_name AS "studentLastName"
-        FROM attendance a
-        JOIN students s ON a.student_id = s.id
-        JOIN classes c ON a.class_id = c.id
+        FROM classes c
         JOIN groups g ON c.group_id = g.id
         JOIN gyms gy ON c.gym_id = gy.id
-        WHERE a.id = $1
-    `, [attendanceId]);
+        JOIN students s ON s.id = $2
+        LEFT JOIN attendance a ON a.class_id = c.id AND a.student_id = s.id
+        WHERE c.id = $1
+    `, [classId, studentId]);
 
     return result.rows[0];
 };

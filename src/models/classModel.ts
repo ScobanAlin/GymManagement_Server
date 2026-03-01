@@ -80,7 +80,11 @@ export const createClass = async (data: {
 
             while (cursor <= end) {
                 if (weekdaySet.has(cursor.getDay())) {
-                    const dateIso = cursor.toISOString().split("T")[0];
+                    // Use local date components to avoid UTC timezone shift
+                    const y = cursor.getFullYear();
+                    const m = String(cursor.getMonth() + 1).padStart(2, "0");
+                    const d = String(cursor.getDate()).padStart(2, "0");
+                    const dateIso = `${y}-${m}-${d}`;
 
                     const result = await client.query(
                         `INSERT INTO classes (group_id, gym_id, class_date, begin_time, end_time)
@@ -108,7 +112,11 @@ export const createClass = async (data: {
             for (let week = 0; week < recurrenceWeeks; week++) {
                 const occurrenceDate = new Date(baseDate);
                 occurrenceDate.setDate(baseDate.getDate() + week * 7);
-                const occurrenceDateIso = occurrenceDate.toISOString().split("T")[0];
+                // Use local date components to avoid UTC timezone shift
+                const oy = occurrenceDate.getFullYear();
+                const om = String(occurrenceDate.getMonth() + 1).padStart(2, "0");
+                const od = String(occurrenceDate.getDate()).padStart(2, "0");
+                const occurrenceDateIso = `${oy}-${om}-${od}`;
 
                 const result = await client.query(
                     `INSERT INTO classes (group_id, gym_id, class_date, begin_time, end_time)

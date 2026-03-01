@@ -4,8 +4,8 @@ import {
     getUpcomingClassesController,
     getClassAttendanceController,
     getGroupStudentsController,
-    updateAttendanceController,
-    getOrCreateAttendanceController,
+    markPresentController,
+    markAbsentController,
 } from "../controllers/attendanceController";
 
 const router = express.Router();
@@ -14,7 +14,7 @@ const router = express.Router();
 router.get("/attendance/upcoming", authMiddleware, requireRole("coach"), getUpcomingClassesController);
 router.get("/attendance/classes/:classId", authMiddleware, requireRole("coach"), getClassAttendanceController);
 router.get("/attendance/groups/:groupId/students", authMiddleware, requireRole("coach"), getGroupStudentsController);
-router.put("/attendance/:attendanceId", authMiddleware, requireRole("coach"), updateAttendanceController);
-router.post("/attendance/classes/:classId/students/:studentId", authMiddleware, requireRole("coach"), getOrCreateAttendanceController);
+router.post("/attendance/classes/:classId/students/:studentId/present", authMiddleware, requireRole("coach"), markPresentController);
+router.post("/attendance/classes/:classId/students/:studentId/absent", authMiddleware, requireRole("coach"), markAbsentController);
 
 export default router;

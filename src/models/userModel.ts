@@ -8,7 +8,7 @@ export const getUserByEmail = async (email: string) => {
 };
 
 export const getUserById = async (id: number) => {
-    const result = await pool.query("SELECT id, email, role FROM users WHERE id = $1", [id]);
+    const result = await pool.query("SELECT id, email, role, first_name AS \"firstName\", last_name AS \"lastName\" FROM users WHERE id = $1", [id]);
     return result.rows[0] || null;
 };
 

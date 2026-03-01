@@ -12,9 +12,9 @@ export const getGymsController = async (req: Request, res: Response) => {
 };
 
 export const createGymController = async (req: Request, res: Response) => {
-    const { name, location, capacity } = req.body;
+    const { name, location } = req.body;
     try {
-        const newGym = await createGym(name, location, capacity);
+        const newGym = await createGym(name, location);
         res.status(201).json(newGym);
     } catch (error) {
         console.error("Error creating gym:", error);
@@ -25,9 +25,9 @@ export const createGymController = async (req: Request, res: Response) => {
 
 export const updateGymController = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, location, capacity } = req.body;
+    const { name, location } = req.body;
     try {
-        const updated = await updateGym(id, name, location, capacity);
+        const updated = await updateGym(id, name, location);
         res.status(200).json(updated);
     } catch (error) {
         console.error("Error updating gym:", error);

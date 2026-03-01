@@ -125,6 +125,7 @@ export const getAllStudentsWithPaymentStatus = async (year: number, month: numbe
             s.id,
             s.first_name AS "firstName",
             s.last_name AS "lastName",
+            s.email,
             s.status,
             s.subscription_type AS "subscriptionType",
             CASE 

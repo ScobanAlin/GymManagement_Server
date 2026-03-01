@@ -61,3 +61,10 @@ export const createNotification = async (data: {
     );
     return result.rows[0];
 };
+
+export const getUnreadNotificationCount = async () => {
+    const result = await pool.query(
+        `SELECT COUNT(*) AS count FROM notifications WHERE is_read = false`
+    );
+    return parseInt(result.rows[0].count, 10);
+};

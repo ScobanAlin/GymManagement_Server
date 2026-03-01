@@ -115,7 +115,7 @@ export const deleteFutureClassSlot = async (
     const result = await pool.query(
         `DELETE FROM classes
          WHERE group_id = $1
-           AND class_date >= CURRENT_DATE
+           AND class_date > CURRENT_DATE
            AND EXTRACT(DOW FROM class_date)::int = $2
            AND begin_time = $3
            AND end_time   = $4
@@ -126,7 +126,7 @@ export const deleteFutureClassSlot = async (
 };
 
 /**
- * Get past classes (class_date < today) for a group, newest first.
+ * Get past classes (class_date < today) for a group, oldest first.
  */
 export const getGroupPastClasses = async (groupId: number) => {
     const result = await pool.query(
@@ -141,7 +141,7 @@ export const getGroupPastClasses = async (groupId: number) => {
         JOIN gyms gy ON gy.id = c.gym_id
         WHERE c.group_id = $1
           AND c.class_date < CURRENT_DATE
-        ORDER BY c.class_date DESC, c.begin_time ASC`,
+        ORDER BY c.class_date ASC, c.begin_time ASC`,
         [groupId]
     );
     return result.rows.map(c => ({

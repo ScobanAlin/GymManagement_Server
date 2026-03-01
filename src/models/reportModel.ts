@@ -57,7 +57,6 @@ export const getAttendanceReport = async (filters?: {
     SELECT 
       a.id,
       a.attended,
-            NULL::text AS notes,
       a.recorded_at AS "recordedAt",
       c.id AS "classId",
       c.class_date AS "classDate",
@@ -121,16 +120,18 @@ export const getStudentAttendanceSummary = async (studentId: number) => {
       s.id AS "studentId",
       s.first_name AS "firstName",
       s.last_name AS "lastName",
-      COUNT(a.id) AS "totalClasses",
-      COUNT(CASE WHEN a.attended = true THEN 1 END) AS "attendedClasses",
-      COUNT(CASE WHEN a.attended = false THEN 1 END) AS "missedClasses",
+      COUNT(DISTINCT c.id) AS "totalClasses",
+      COUNT(DISTINCT CASE WHEN a.attended = true THEN a.class_id END) AS "attendedClasses",
+      COUNT(DISTINCT CASE WHEN a.attended = false THEN a.class_id END) AS "missedClasses",
       ROUND(
-        (COUNT(CASE WHEN a.attended = true THEN 1 END)::DECIMAL / 
-         NULLIF(COUNT(a.id), 0)) * 100, 
+        (COUNT(DISTINCT CASE WHEN a.attended = true THEN a.class_id END)::DECIMAL / 
+         NULLIF(COUNT(DISTINCT c.id), 0)) * 100, 
         2
       ) AS "attendanceRate"
     FROM students s
-    LEFT JOIN attendance a ON s.id = a.student_id
+    JOIN student_group sg ON s.id = sg.student_id
+    JOIN classes c ON c.group_id = sg.group_id AND c.class_date <= CURRENT_DATE
+    LEFT JOIN attendance a ON a.student_id = s.id AND a.class_id = c.id
     WHERE s.id = $1
     GROUP BY s.id, s.first_name, s.last_name
     `,

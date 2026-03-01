@@ -14,6 +14,8 @@ import paymentRoutes from "./routes/paymentRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import reportRoutes from "./routes/reportRoutes";
 import attendanceRoutes from "./routes/attendanceRoutes";
+import subscriptionTypeRoutes from "./routes/subscriptionTypeRoutes";
+import emailRoutes from "./routes/emailRoutes";
 import populateDatabase from "./population-scripts";
 import { populate } from "dotenv";
 
@@ -22,9 +24,13 @@ import { populate } from "dotenv";
 
 const app = express();
 
+const allowedOrigins = process.env.FRONTEND_URL
+  ? [process.env.FRONTEND_URL, "http://localhost:3000"]
+  : ["http://localhost:3000"];
+
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -46,6 +52,8 @@ app.use("/api", paymentRoutes);
 app.use("/api", notificationRoutes);
 app.use("/api", reportRoutes);
 app.use("/api", attendanceRoutes);
+app.use("/api", subscriptionTypeRoutes);
+app.use("/api", emailRoutes);
 createTables()
   .then(() => {
     app.listen(PORT, () => {

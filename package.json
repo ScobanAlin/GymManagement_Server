@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc && cp -r src/views dist/",
+    "build": "tsc",
     "start": "node dist/index.js",
     "populate": "ts-node src/population-scripts.ts",
     "populate:attendance": "ts-node src/attendance-population.ts",
@@ -20,12 +20,14 @@
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^8.0.1",
     "pg": "^8.16.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/nodemailer": "^7.0.11",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.2"
   }

@@ -3,8 +3,8 @@ import {
     getUpcomingClasses,
     getClassAttendance,
     getGroupStudentsForAttendance,
-    updateAttendance,
-    getOrCreateAttendance,
+    markPresent,
+    markAbsent,
     getStudentObservations,
     getRecentObservations,
     createObservation,
@@ -72,36 +72,10 @@ export const getGroupStudentsController = async (req: Request, res: Response) =>
 };
 
 /**
- * PUT /attendance/:attendanceId
- * Update attendance record (mark attended and/or add notes)
+ * POST /attendance/classes/:classId/students/:studentId/present
+ * Mark a student as present (create attendance record)
  */
-export const updateAttendanceController = async (req: AuthRequest, res: Response) => {
-    try {
-        const attendanceId = Number(req.params.attendanceId);
-        const { attended } = req.body;
-        const coachId = req.user?.id;
-
-        if (isNaN(attendanceId)) {
-            return res.status(400).json({ message: "Invalid attendance ID" });
-        }
-
-        if (typeof attended !== "boolean") {
-            return res.status(400).json({ message: "Attended must be a boolean" });
-        }
-
-        const updated = await updateAttendance(attendanceId, attended, coachId);
-        res.status(200).json(updated);
-    } catch (error) {
-        console.error("Error updating attendance:", error);
-        res.status(500).json({ message: "Internal server error" });
-    }
-};
-
-/**
- * POST /attendance/classes/:classId/students/:studentId
- * Get or create attendance record
- */
-export const getOrCreateAttendanceController = async (req: AuthRequest, res: Response) => {
+export const markPresentController = async (req: AuthRequest, res: Response) => {
     try {
         const classId = Number(req.params.classId);
         const studentId = Number(req.params.studentId);
@@ -111,10 +85,32 @@ export const getOrCreateAttendanceController = async (req: AuthRequest, res: Res
             return res.status(400).json({ message: "Invalid class or student ID" });
         }
 
-        const record = await getOrCreateAttendance(classId, studentId, coachId);
+        const record = await markPresent(classId, studentId, coachId);
         res.status(200).json(record);
     } catch (error) {
-        console.error("Error getting/creating attendance:", error);
+        console.error("Error marking present:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+/**
+ * POST /attendance/classes/:classId/students/:studentId/absent
+ * Mark a student as absent (create attendance record with attended=false)
+ */
+export const markAbsentController = async (req: AuthRequest, res: Response) => {
+    try {
+        const classId = Number(req.params.classId);
+        const studentId = Number(req.params.studentId);
+        const coachId = req.user?.id;
+
+        if (isNaN(classId) || isNaN(studentId)) {
+            return res.status(400).json({ message: "Invalid class or student ID" });
+        }
+
+        const record = await markAbsent(classId, studentId, coachId);
+        res.status(200).json(record);
+    } catch (error) {
+        console.error("Error marking absent:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 };

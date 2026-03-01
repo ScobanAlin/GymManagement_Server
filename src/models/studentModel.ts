@@ -2,7 +2,8 @@ import pool from '../db';
 
 export const getAllStudents = async () => {
     const result = await pool.query(`
-        SELECT id, first_name AS "firstName", last_name AS "lastName"
+        SELECT id, first_name AS "firstName", last_name AS "lastName",
+               email, subscription_type AS "subscriptionType", status
         FROM students
         ORDER BY last_name, first_name;
     `);
@@ -30,12 +31,13 @@ export const createStudent = async (data: {
     lastName: string;
     cnp: string;
     dateOfBirth: string;
+    email?: string;
     status: string;
 }) => {
     const result = await pool.query(
         `
-        INSERT INTO students (first_name, last_name, cnp, date_of_birth, status)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO students (first_name, last_name, cnp, date_of_birth, email, status)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id, first_name AS "firstName", last_name AS "lastName";
         `,
         [
@@ -43,6 +45,7 @@ export const createStudent = async (data: {
             data.lastName,
             data.cnp,
             data.dateOfBirth,
+            data.email || null,
             data.status
         ]
     );
@@ -69,6 +72,7 @@ export const getStudentDetails = async (id: number) => {
             last_name AS "lastName",
             cnp,
             date_of_birth AS "dateOfBirth",
+            email,
             subscription_type AS "subscriptionType",
             status
          FROM students 
@@ -123,16 +127,48 @@ export const updateStudentStatus = async (studentId: number, status: string) => 
     );
 };
 
+export const updateStudentEmail = async (studentId: number, email: string) => {
+    await pool.query(
+        `UPDATE students SET email = $1 WHERE id = $2`,
+        [email, studentId]
+    );
+};
+
+export const updateStudent = async (studentId: number, data: {
+    firstName: string;
+    lastName: string;
+    cnp: string;
+    dateOfBirth: string;
+    email?: string;
+}) => {
+    const result = await pool.query(
+        `UPDATE students 
+         SET first_name = $1, last_name = $2, cnp = $3, date_of_birth = $4, email = $5
+         WHERE id = $6
+         RETURNING id, first_name AS "firstName", last_name AS "lastName"`,
+        [
+            data.firstName,
+            data.lastName,
+            data.cnp,
+            data.dateOfBirth,
+            data.email || null,
+            studentId
+        ]
+    );
+    return result.rows[0];
+};
+
 export const getStudentPayments = async (studentId: number) => {
     const result = await pool.query(
         `SELECT 
             id,
             amount,
+            year,
             month,
             payment_date
          FROM payments
          WHERE student_id = $1
-         ORDER BY payment_date DESC`,
+         ORDER BY year DESC, month DESC`,
         [studentId]
     );
 

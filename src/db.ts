@@ -6,7 +6,9 @@ const connectionString = process.env.DATABASE_URL;
 const pool = connectionString
   ? new Pool({
     connectionString,
-    ssl: false,
+    ssl: process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false,
   })
   : new Pool({
     host: process.env.PGHOST,
@@ -34,6 +36,19 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- ==============================
+-- SUBSCRIPTION TYPES TABLE
+-- ==============================
+CREATE TABLE IF NOT EXISTS subscription_types (
+  id SERIAL PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL,
+  price DECIMAL(10,2) NOT NULL CHECK (price >= 0)
+);
+
+-- Default subscription types seed
+INSERT INTO subscription_types (name, price) VALUES ('normal', 0), ('premium', 0)
+ON CONFLICT (name) DO NOTHING;
+
+-- ==============================
 -- STUDENTS TABLE
 -- ==============================
 CREATE TABLE IF NOT EXISTS students (
@@ -42,9 +57,18 @@ CREATE TABLE IF NOT EXISTS students (
   first_name TEXT NOT NULL,
   cnp CHAR(13) UNIQUE NOT NULL,
   date_of_birth DATE NOT NULL,
+  email TEXT,
   subscription_type TEXT CHECK (subscription_type IN ('normal', 'premium')) DEFAULT 'normal',
   status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active'
 );
+
+-- Migration: Add email column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'email') THEN
+    ALTER TABLE students ADD COLUMN email TEXT;
+  END IF;
+END $$;
 
 -- ==============================
 -- GYMS TABLE
@@ -52,8 +76,7 @@ CREATE TABLE IF NOT EXISTS students (
 CREATE TABLE IF NOT EXISTS gyms (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
-  location TEXT NOT NULL,
-  capacity INT CHECK (capacity > 0)
+  location TEXT NOT NULL
 );
 
 -- ==============================

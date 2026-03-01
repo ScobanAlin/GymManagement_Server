@@ -16,7 +16,7 @@ const hasRequiredRole = (userRole: string, minimumRole: string): boolean => {
 };
 
 export interface AuthRequest extends Request {
-    user?: { id: number; email: string; role: string };
+    user?: { id: number; email: string; role: string; firstName?: string; lastName?: string };
 }
 
 export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {

@@ -2,10 +2,13 @@ import pool from '../db';
 
 export const getAllStudents = async () => {
     const result = await pool.query(`
-        SELECT id, first_name AS "firstName", last_name AS "lastName",
-               email, subscription_type AS "subscriptionType", status
-        FROM students
-        ORDER BY last_name, first_name;
+        SELECT s.id, s.first_name AS "firstName", s.last_name AS "lastName",
+               s.email, s.subscription_type AS "subscriptionType", s.status,
+               g.name AS "groupName"
+        FROM students s
+        LEFT JOIN student_group sg ON sg.student_id = s.id
+        LEFT JOIN groups g ON g.id = sg.group_id
+        ORDER BY s.last_name, s.first_name;
     `);
     return result.rows;
 };

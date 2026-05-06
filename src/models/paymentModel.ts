@@ -111,6 +111,13 @@ export const getUnpaidStudents = async (year: number, month: number) => {
             s.subscription_type AS "subscriptionType"
         FROM students s
         WHERE s.status = 'active'
+        AND (
+            EXTRACT(YEAR FROM s.created_at) < $1
+            OR (
+                EXTRACT(YEAR FROM s.created_at) = $1
+                AND EXTRACT(MONTH FROM s.created_at) <= $2
+            )
+        )
         AND s.id NOT IN (
             SELECT DISTINCT student_id FROM payments WHERE year = $1 AND month = $2
         )
@@ -138,6 +145,13 @@ export const getAllStudentsWithPaymentStatus = async (year: number, month: numbe
         FROM students s
         LEFT JOIN payments p ON s.id = p.student_id AND p.year = $1 AND p.month = $2
         WHERE s.status = 'active'
+        AND (
+            EXTRACT(YEAR FROM s.created_at) < $1
+            OR (
+                EXTRACT(YEAR FROM s.created_at) = $1
+                AND EXTRACT(MONTH FROM s.created_at) <= $2
+            )
+        )
         ORDER BY s.last_name, s.first_name
     `, [year, month]);
     return result.rows;

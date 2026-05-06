@@ -70,7 +70,8 @@ CREATE TABLE IF NOT EXISTS students (
   date_of_birth DATE NOT NULL,
   email TEXT,
   subscription_type TEXT CHECK (subscription_type IN ('normal', 'premium')) DEFAULT 'normal',
-  status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active'
+  status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Migration: Add email column if it doesn't exist
@@ -78,6 +79,19 @@ DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'email') THEN
     ALTER TABLE students ADD COLUMN email TEXT;
+  END IF;
+END $$;
+
+-- Migration: Add created_at column to students if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'created_at') THEN
+    -- Add WITHOUT a default so existing rows are NULL, not filled with NOW()
+    ALTER TABLE students ADD COLUMN created_at TIMESTAMP;
+    -- Existing students get March 2026 so they appear in all billing months from that point
+    UPDATE students SET created_at = '2026-03-01' WHERE created_at IS NULL;
+    -- Now set the default for all future inserts
+    ALTER TABLE students ALTER COLUMN created_at SET DEFAULT NOW();
   END IF;
 END $$;
 

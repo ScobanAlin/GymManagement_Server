@@ -27,6 +27,20 @@ export const createGroup = async (name: string) => {
 };
 
 /**
+ * Rename a group
+ */
+export const updateGroupName = async (id: number, name: string) => {
+    const result = await pool.query(
+        `UPDATE groups
+         SET name = $1
+         WHERE id = $2
+         RETURNING id, name;`,
+        [name, id]
+    );
+    return result.rows[0];
+};
+
+/**
  * Delete a group
  */
 export const deleteGroup = async (id: string) => {

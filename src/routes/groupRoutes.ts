@@ -3,6 +3,7 @@ import { authMiddleware, requireRole } from "../middlewares/authMiddleware";
 import {
     getGroupsController,
     createGroupController,
+    updateGroupNameController,
     deleteGroupController,
     getGroupClassesController,
     getGroupStudentsController,
@@ -19,6 +20,9 @@ router.get("/groups", authMiddleware, requireRole("coach"), getGroupsController)
 
 // Create group category
 router.post("/groups", authMiddleware, requireRole("coach"), createGroupController);
+
+// Rename a group (admin only)
+router.put("/groups/:id", authMiddleware, requireRole("admin"), updateGroupNameController);
 
 // Delete a group
 router.delete("/groups/:id", authMiddleware, requireRole("coach"), deleteGroupController);

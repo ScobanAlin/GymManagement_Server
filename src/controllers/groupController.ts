@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import {
     getGroups,
     createGroup,
+    updateGroupName,
     deleteGroup,
     getGroupStudents,
     getGroupClasses,
@@ -32,6 +33,26 @@ export const createGroupController = async (req: Request, res: Response) => {
 
     } catch (error) {
         console.error("Error creating group:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const updateGroupNameController = async (req: Request, res: Response) => {
+    try {
+        const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
+
+        if (!name)
+            return res.status(400).json({ message: "Name is required" });
+
+        const group = await updateGroupName(Number(req.params.id), name);
+        if (!group)
+            return res.status(404).json({ message: "Group not found" });
+
+        res.status(200).json(group);
+    } catch (error: any) {
+        if (error?.code === "23505")
+            return res.status(409).json({ message: "A group with this name already exists" });
+        console.error("Error renaming group:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 };
